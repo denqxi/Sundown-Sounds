@@ -1,0 +1,126 @@
+
+.navbar {
+    background: linear-gradient(to right, #8B5E3C, #8B5E3C); /* Warm gradient */
+    padding-top: 1px;
+    padding-bottom: 5px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+    font-size: 19px;
+    color: white;
+    transition: 0.3s;
+    padding-left: 30px;  /* Adjust the space between the links */
+    padding-right: 30px;
+    margin-left: 10px;    /* Add space between the Account and Cart links */
+    margin-right: 50px;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #FFD166; /* Warm yellow hover */
+}
+
+/* Custom Navbar Toggler (Burger Menu) */
+.navbar-toggler {
+    border: none;
+    background-color: transparent;
+    padding: 0.5rem 1rem;
+}
+
+/* Styling the burger icon */
+.navbar-toggler-icon {
+    width: 30px;
+    height: 3px;
+    background-color: #33333300;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+/* Animation for the burger icon on click */
+.navbar-toggler.collapsed .navbar-toggler-icon {
+    background-color: #33333300;
+}
+
+/* Styling when the menu is opened (cross icon) */
+.navbar-toggler.collapsed .navbar-toggler-icon::before,
+.navbar-toggler.collapsed .navbar-toggler-icon::after {
+    content: '';
+    display: block;
+    position: absolute;
+    width: 30px;
+    height: 3px;
+    background-color: #33333300;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.navbar-toggler.collapsed .navbar-toggler-icon::before {
+    transform: rotate(45deg);
+    top: 0;
+}
+
+.navbar-toggler.collapsed .navbar-toggler-icon::after {
+    transform: rotate(-45deg);
+    bottom: 0;
+}
+
+/* For larger screens (medium and up) */
+@media (min-width: 768px) {
+    .navbar-toggler {
+        display: none;
+    }
+}
+
+.btn-warning {
+    background-color: #C75D5D;
+    border-color: #C75D5D;
+}
+
+.btn-warning:hover {
+    background-color: #8B5E3C;
+    border-color: #8B5E3C;
+}
+
+.hero-section {
+    text-align: center;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #F5E6CA, #F5E6CA); /* Warm gradient */
+    color: white;
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .hero-section h1 {
+        font-size: 24px;
+    }
+    .hero-section p {
+        font-size: 16px;
+    }
+    .btn-lg {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+}
+
+.carousel-inner img {
+    max-height: 400px;
+    object-fit: cover;
+}
+
+.carousel-control-prev-icon img,
+.carousel-control-next-icon img {
+    width: 30px;
+    height: 30px;
+}
+
+@media (max-width: 768px) {
+    .carousel-inner img {
+        max-height: 250px;
+    }
+}
+
+
+
