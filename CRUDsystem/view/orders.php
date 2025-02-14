@@ -2,18 +2,27 @@
 session_start();
 include_once __DIR__ . '/../database/database.php';
 
-// Fetch all orders along with their items
-$query = "SELECT o.order_id, o.customer_name, o.address, o.order_date, o.total_amount, o.payment_method, o.status, oi.album_id, oi.quantity, a.album_name 
+
+// 🔍 Debugging: Check if session exists
+if (!isset($_SESSION['id'])) {
+    die("Unauthorized access. Please log in.");
+}
+
+$user_id = $_SESSION['id']; // ✅ Get logged-in user's ID
+
+// ✅ Fetch only the logged-in user's orders
+$query = "SELECT o.order_id, u.customer_name AS customer_name, o.address, o.order_date, 
+                 o.total_amount, o.payment_method, o.status, oi.album_id, oi.quantity, 
+                 a.album_name 
           FROM orders o
+          JOIN users u ON o.user_id = u.id
           LEFT JOIN order_items oi ON o.order_id = oi.order_id
           LEFT JOIN albums a ON oi.album_id = a.album_id
+          WHERE o.user_id = ?  -- ✅ Filter by logged-in user
           ORDER BY o.order_date ASC";
 
 $stmt = $conn->prepare($query);
-if ($stmt === false) {
-    die('Error preparing query: ' . $conn->error);
-}
-
+$stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 

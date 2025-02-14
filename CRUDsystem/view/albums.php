@@ -8,7 +8,7 @@ $genreStmt = $conn->prepare($genreQuery);
 $genreStmt->execute();
 $genreResult = $genreStmt->get_result();
 
-// Base query to fetch albums with multiple genres
+// Base query to fetch albums with multiple genres, including release_date
 $query = "SELECT albums.*, artists.artist_name, 
                  COALESCE(GROUP_CONCAT(DISTINCT genres.genre_name SEPARATOR ', '), 'No Genre') AS genre_names
           FROM albums 
@@ -66,7 +66,6 @@ include_once __DIR__ . '/../includes/navbar.php';
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-
 ?>
 
 <div class="container mt-5">
@@ -97,6 +96,7 @@ ini_set('display_errors', 1);
                             <p class="card-text">by <?= htmlspecialchars($album['artist_name']); ?></p>
                             <p><strong>Genres:</strong> <?= htmlspecialchars($album['genre_names']); ?></p>
                             <p><strong>Available Stock:</strong> <?= $album['albmQty']; ?> units</p>
+                            <p><strong>Release Date:</strong> <?= date("F d, Y", strtotime($album['release_date'])); ?></p> <!-- Added Release Date -->
                             <a href="/../CRUDsystem/view/albumdetails.php?id=<?= $album['album_id']; ?>" class="btn btn-dark">View Details</a>
                         </div>
                     </div>

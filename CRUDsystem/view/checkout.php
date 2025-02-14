@@ -1,60 +1,48 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['id']) || empty($_SESSION['id'])) {
+    echo "<script>alert('Please log in to proceed to checkout.'); window.location.href='/CRUDsystem/index.php';</script>";
+    exit();
+}
+
 include_once __DIR__ . '/../database/database.php';
+include_once __DIR__ . '/../includes/navbar.php'; // ✅ Include the navbar
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'];
-    $address = $_POST['address'];
-    $payment_method = $_POST['payment_method'];
-    $session_id = session_id();
+$user_id = $_SESSION['id'];
+$session_id = session_id(); // ✅ Get the session ID for cart tracking
 
-    // Calculate total amount
-    $query = "SELECT SUM(a.price * c.quantity) AS total_amount 
-              FROM cart c 
-              JOIN albums a ON c.album_id = a.album_id 
-              WHERE c.session_id = ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $session_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $total_amount = $row['total_amount'];
+// Fetch user details (Only customer_name since address is not stored in users table)
+$query = "SELECT customer_name FROM users WHERE id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$customer_name = $user['customer_name'] ?? '';
 
-    // Insert order
-    $insertOrder = "INSERT INTO orders (customer_name, address, order_date, total_amount, payment_method, status) 
-                    VALUES (?, ?, NOW(), ?, ?, 'Processing')";
-    $stmt = $conn->prepare($insertOrder);
-    $stmt->bind_param("ssds", $name, $address, $total_amount, $payment_method);
-    $stmt->execute();
-    $order_id = $stmt->insert_id;
+if (!$customer_name) {
+    die("User not found in the database. Check if you are logged in.");
+}
 
-    // Move cart items to order_items and update album quantity
-    $insertOrderItems = "INSERT INTO order_items (order_id, album_id, quantity, price) 
-                         SELECT ?, c.album_id, c.quantity, a.price 
-                         FROM cart c 
-                         JOIN albums a ON c.album_id = a.album_id
-                         WHERE c.session_id = ?";
-    $stmt = $conn->prepare($insertOrderItems);
-    $stmt->bind_param("is", $order_id, $session_id);
-    $stmt->execute();
+// ✅ Fetch total items and total amount from the cart using `session_id`
+$query = "SELECT COALESCE(SUM(quantity), 0) AS total_items, COALESCE(SUM(quantity * price), 0) AS total_amount 
+          FROM cart WHERE session_id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("s", $session_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$cart_data = $result->fetch_assoc();
 
-    // Update album quantities in the albums table
-    $updateAlbumQuantity = "UPDATE albums a
-                            JOIN cart c ON a.album_id = c.album_id
-                            SET a.albmQty = a.albmQty - c.quantity
-                            WHERE c.session_id = ?";
-    $stmt = $conn->prepare($updateAlbumQuantity);
-    $stmt->bind_param("s", $session_id);
-    $stmt->execute();
+$total_items = $cart_data['total_items'];
+$total_amount = $cart_data['total_amount'];
 
-    // Clear cart
-    $deleteCart = "DELETE FROM cart WHERE session_id = ?";
-    $stmt = $conn->prepare($deleteCart);
-    $stmt->bind_param("s", $session_id);
-    $stmt->execute();
-
-    // Redirect to receipt.php
-    echo "<script>window.location.href='/../CRUDsystem/view/receipt.php?order_id={$order_id}';</script>";
+// ✅ Prevent checkout if cart is empty
+if ($total_items == 0) {
+    echo "<script>alert('Your cart is empty. Add items before checkout.'); window.location.href='/CRUDsystem/cart.php';</script>";
+    exit();
 }
 ?>
 
@@ -77,27 +65,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </style>
 </head>
 <body>
-    <?php 
-    include_once __DIR__ . '/../includes/navbar.php'; 
-    ?>
     <div class="container mt-5">
         <h2>Checkout</h2>
-        <form method="POST">
+        <form method="POST" action="/CRUDsystem/handler/order_handler.php"> <!-- ✅ Submits to order_handler.php -->
+            <input type="hidden" name="user_id" value="<?= htmlspecialchars($user_id) ?>">
+            <input type="hidden" name="session_id" value="<?= htmlspecialchars($session_id) ?>"> <!-- ✅ Add session_id -->
+            <input type="hidden" name="total_items" value="<?= htmlspecialchars($total_items) ?>">
+            <input type="hidden" name="total_amount" value="<?= htmlspecialchars($total_amount) ?>">
+
             <div class="mb-3">
                 <label class="form-label">Full Name</label>
-                <input type="text" class="form-control" name="name" required>
+                <input type="text" class="form-control" value="<?= htmlspecialchars($customer_name) ?>" readonly>
             </div>
             <div class="mb-3">
-                <label class="form-label">Address</label>
-                <textarea class="form-control" name="address" required></textarea>
+                <label class="form-label">Address <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="address" placeholder="Enter delivery address" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Payment Method</label>
-                <select class="form-select" name="payment_method" required>
-                    <option value="Cash on Delivery">Cash on Delivery</option>
-                    <option value="Credit Card">Credit Card</option>
-                    <option value="Gcash">Gcash</option>
+                <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                <select class="form-control" name="payment_method" required>
+                    <option value="" disabled selected>Select a payment method</option>
+                    <option value="cash_on_delivery">Cash on Delivery</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="gcash">GCash</option>
+                    <option value="paypal">PayPal</option>
                 </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Total Items</label>
+                <input type="text" class="form-control" value="<?= $total_items ?>" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Total Amount (₱)</label>
+                <input type="text" class="form-control" value="<?= number_format($total_amount, 2) ?>" readonly>
             </div>
             <button type="submit" class="btn btn-success">Place Order</button>
         </form>
@@ -105,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!-- Footer -->
 <footer class="bg-dark text-white text-center py-3">
-    <p>&copy; 2025 Warm Vibes Music. All rights reserved.</p>
+    <p>&copy; 2025 Sundown Sounds. All rights reserved.</p>
 </footer>
 </body>
 </html>
